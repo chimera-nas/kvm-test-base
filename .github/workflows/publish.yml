@@ -49,9 +49,12 @@ jobs:
           if [ -z "${VERSION}" ]; then
             echo "::error::VERSION file is empty"; exit 1
           fi
+          # Single 2-segment repo (ghcr.io/<owner>/kvm-test-base); the variant
+          # is encoded in the tag so registry proxies that can't route nested
+          # (3+ segment) repository paths still work.
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "ref=${REGISTRY_BASE}/${{ matrix.variant.name }}" >> "$GITHUB_OUTPUT"
-          echo "tag=${VERSION}-${{ matrix.arch }}" >> "$GITHUB_OUTPUT"
+          echo "ref=${REGISTRY_BASE}" >> "$GITHUB_OUTPUT"
+          echo "tag=${{ matrix.variant.name }}-${VERSION}-${{ matrix.arch }}" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GHCR
         run: |
@@ -101,4 +104,4 @@ jobs:
           oras push "${REF}:${{ steps.meta.outputs.tag }}" \
             --artifact-type "${ARTIFACT_TYPE}" ${FILES}
           # Moving convenience tag, updated only when a new version publishes.
-          oras tag "${REF}:${{ steps.meta.outputs.tag }}" "latest-${{ matrix.arch }}"
+          oras tag "${REF}:${{ steps.meta.outputs.tag }}" "${{ matrix.variant.name }}-latest-${{ matrix.arch }}"
