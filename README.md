@@ -53,10 +53,15 @@ oras pull ghcr.io/chimera-nas/kvm-test-base:ubuntu2404-v1.0.0-amd64 -o ./out
 |---|---|---|
 | `ubuntu2404` | 24.04 | `linux-image-generic` |
 | `ubuntu2404_hwe` | 24.04 | `linux-image-generic-hwe-24.04` |
-| `ubuntu2204` | 22.04 | `linux-image-generic` |
 | `ubuntu2204_hwe` | 22.04 | `linux-image-generic-hwe-22.04` |
 
 See [`variants.txt`](variants.txt) for the canonical list.
+
+> The 22.04 **generic** kernel was dropped in `v1.1.0`: it builds `virtio_blk`
+> as a module, so it can only mount its root disk from an initrd, whereas
+> chimera boots these guests with no initrd. 22.04 is covered by its HWE kernel
+> (`ubuntu2204_hwe`), which has virtio built in. `v1.0.0` still has all four
+> variants for consumers pinned to it.
 
 ## Building locally
 
