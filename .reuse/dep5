@@ -3,6 +3,6 @@ Upstream-Name: kvm-test-base
 Upstream-Contact: Chimera-NAS Project Contributors
 Source: https://github.com/chimera-nas/kvm-test-base
 
-Files: LICENSE .gitignore
+Files: LICENSE .gitignore VERSION
 Copyright: 2026 Chimera-NAS Project Contributors
 License: Unlicense

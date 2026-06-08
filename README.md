@@ -30,13 +30,17 @@ ghcr.io/chimera-nas/kvm-test-base/<variant>:<version>-<arch>
   payload: vmlinuz, initrd, rootfs.qcow2
 ```
 
-- `<version>` is `latest` on `main`, or the git tag (e.g. `v1.2.0`) on release.
-- An immutable `g<short-sha>-<arch>` tag is also published for reproducible pins.
+- `<version>` is read from the [`VERSION`](VERSION) file (e.g. `v1.0.0`).
+- **Versions are immutable**: the publish workflow refuses to overwrite an
+  already-published `<version>-<arch>` tag. To ship changes, bump `VERSION` —
+  that creates new artifacts and leaves existing ones untouched. Bump the major
+  on breaking changes so pinned consumers keep working.
+- A moving `latest-<arch>` tag tracks the most recently published version.
 
 Packages are public, so pulls need no authentication:
 
 ```sh
-oras pull ghcr.io/chimera-nas/kvm-test-base/ubuntu2404:latest-amd64 -o ./out
+oras pull ghcr.io/chimera-nas/kvm-test-base/ubuntu2404:v1.0.0-amd64 -o ./out
 ```
 
 ### Variants

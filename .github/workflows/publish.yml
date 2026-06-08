@@ -7,7 +7,6 @@ name: Build and publish KVM test images
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   workflow_dispatch:
 
 # GITHUB_TOKEN needs packages:write to push OCI artifacts to GHCR.
@@ -40,18 +39,49 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Resolve version and target
+        id: meta
+        run: |
+          VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [ -z "${VERSION}" ]; then
+            echo "::error::VERSION file is empty"; exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "ref=${REGISTRY_BASE}/${{ matrix.variant.name }}" >> "$GITHUB_OUTPUT"
+          echo "tag=${VERSION}-${{ matrix.arch }}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      # Immutability guard: never overwrite an already-published version.
+      # Bumping the VERSION file is what creates a new artifact; existing
+      # versions are left untouched.
+      - name: Check if this version is already published
+        id: check
+        run: |
+          REF="${{ steps.meta.outputs.ref }}:${{ steps.meta.outputs.tag }}"
+          if oras manifest fetch "${REF}" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::${REF} already published; bump the VERSION file to publish changes. Skipping build."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install build tools (qemu-img, mkfs.ext4)
+        if: steps.check.outputs.exists != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends qemu-utils e2fsprogs
 
-      - name: Set up ORAS
-        uses: oras-project/setup-oras@v1
-
       - name: Build VM image (kernel + initrd + rootfs.qcow2)
+        if: steps.check.outputs.exists != 'true'
         run: |
           mkdir -p out
-          # build_vm_image.sh produces out/vmlinuz, out/initrd, out/rootfs.qcow2.
           # No KVM_CACHE_REGISTRY here -> plain `docker build` with default
           # registries/mirrors (works on hosted runners and external forks).
           bash build_vm_image.sh "$PWD/out" "$PWD/Dockerfile.kvm" "$PWD" \
@@ -59,31 +89,16 @@ jobs:
             UBUNTU_VERSION_CODENAME=${{ matrix.variant.codename }} \
             KERNEL_PACKAGE=${{ matrix.variant.kernel }}
 
-      - name: Compute version tags
-        id: ver
-        run: |
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
-            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=latest" >> "$GITHUB_OUTPUT"
-          fi
-          echo "sha=g$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Log in to GHCR
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" \
-            | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
-
       - name: Push OCI artifact
+        if: steps.check.outputs.exists != 'true'
         working-directory: out
         run: |
-          REF="${REGISTRY_BASE}/${{ matrix.variant.name }}"
+          REF="${{ steps.meta.outputs.ref }}"
           FILES="vmlinuz:application/octet-stream \
                  initrd:application/octet-stream \
                  rootfs.qcow2:application/octet-stream"
-          # Primary, human-friendly tag (moving on main, immutable on release tags).
-          oras push "${REF}:${{ steps.ver.outputs.version }}-${{ matrix.arch }}" \
+          # Immutable, version-pinned tag (the durable artifact).
+          oras push "${REF}:${{ steps.meta.outputs.tag }}" \
             --artifact-type "${ARTIFACT_TYPE}" ${FILES}
-          # Immutable commit-pinned tag for reproducible consumption.
-          oras tag "${REF}:${{ steps.ver.outputs.version }}-${{ matrix.arch }}" \
-            "${{ steps.ver.outputs.sha }}-${{ matrix.arch }}"
+          # Moving convenience tag, updated only when a new version publishes.
+          oras tag "${REF}:${{ steps.meta.outputs.tag }}" "latest-${{ matrix.arch }}"
