@@ -1,0 +1,6 @@
+out/
+*.qcow2
+*.raw
+*.img
+vmlinuz
+initrd

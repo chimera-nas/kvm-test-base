@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: 2026 Chimera-NAS Project Contributors
+#
+# SPDX-License-Identifier: Unlicense
+
+name: Build and publish KVM test images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# GITHUB_TOKEN needs packages:write to push OCI artifacts to GHCR.
+permissions:
+  contents: read
+  packages: write
+
+env:
+  # Base name for the published OCI artifacts; one package per variant:
+  #   ghcr.io/chimera-nas/kvm-test-base/<variant>:<version>-<arch>
+  REGISTRY_BASE: ghcr.io/${{ github.repository }}
+  ARTIFACT_TYPE: application/vnd.chimera.kvm-image.v1
+
+jobs:
+  publish:
+    # amd64 on the standard hosted runner, arm64 on the hosted arm64 runner.
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+        variant:
+          - { name: ubuntu2404,     ubuntu: "24.04", codename: noble, kernel: linux-image-generic }
+          - { name: ubuntu2404_hwe, ubuntu: "24.04", codename: noble, kernel: linux-image-generic-hwe-24.04 }
+          - { name: ubuntu2204,     ubuntu: "22.04", codename: jammy, kernel: linux-image-generic }
+          - { name: ubuntu2204_hwe, ubuntu: "22.04", codename: jammy, kernel: linux-image-generic-hwe-22.04 }
+
+    name: ${{ matrix.variant.name }} (${{ matrix.arch }})
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools (qemu-img, mkfs.ext4)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-utils e2fsprogs
+
+      - name: Set up ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Build VM image (kernel + initrd + rootfs.qcow2)
+        run: |
+          mkdir -p out
+          # build_vm_image.sh produces out/vmlinuz, out/initrd, out/rootfs.qcow2.
+          # No KVM_CACHE_REGISTRY here -> plain `docker build` with default
+          # registries/mirrors (works on hosted runners and external forks).
+          bash build_vm_image.sh "$PWD/out" "$PWD/Dockerfile.kvm" "$PWD" \
+            UBUNTU_VERSION=${{ matrix.variant.ubuntu }} \
+            UBUNTU_VERSION_CODENAME=${{ matrix.variant.codename }} \
+            KERNEL_PACKAGE=${{ matrix.variant.kernel }}
+
+      - name: Compute version tags
+        id: ver
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=latest" >> "$GITHUB_OUTPUT"
+          fi
+          echo "sha=g$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" \
+            | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Push OCI artifact
+        working-directory: out
+        run: |
+          REF="${REGISTRY_BASE}/${{ matrix.variant.name }}"
+          FILES="vmlinuz:application/octet-stream \
+                 initrd:application/octet-stream \
+                 rootfs.qcow2:application/octet-stream"
+          # Primary, human-friendly tag (moving on main, immutable on release tags).
+          oras push "${REF}:${{ steps.ver.outputs.version }}-${{ matrix.arch }}" \
+            --artifact-type "${ARTIFACT_TYPE}" ${FILES}
+          # Immutable commit-pinned tag for reproducible consumption.
+          oras tag "${REF}:${{ steps.ver.outputs.version }}-${{ matrix.arch }}" \
+            "${{ steps.ver.outputs.sha }}-${{ matrix.arch }}"

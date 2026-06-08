@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: kvm-test-base
+Upstream-Contact: Chimera-NAS Project Contributors
+Source: https://github.com/chimera-nas/kvm-test-base
+
+Files: LICENSE .gitignore
+Copyright: 2026 Chimera-NAS Project Contributors
+License: Unlicense

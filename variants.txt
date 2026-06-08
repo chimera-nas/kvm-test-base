@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 Chimera-NAS Project Contributors
+# SPDX-License-Identifier: Unlicense
+#
+# KVM test guest variants, single-sourced for the publish workflow and local
+# builds.  Format (| separated):
+#
+#   name | ubuntu_version | ubuntu_codename | kernel_package
+#
+ubuntu2404|24.04|noble|linux-image-generic
+ubuntu2404_hwe|24.04|noble|linux-image-generic-hwe-24.04
+ubuntu2204|22.04|jammy|linux-image-generic
+ubuntu2204_hwe|22.04|jammy|linux-image-generic-hwe-22.04
