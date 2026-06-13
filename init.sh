@@ -7,6 +7,11 @@ mount -t proc none /proc
 mount -t sysfs none /sys
 mount -t devtmpfs udev /dev
 mount -t tmpfs none /tmp
+# POSIX shm and pseudo-terminals: a number of tests (e.g. LTP cachestat/ioctl/
+# remap_file_pages) need /dev/shm and /dev/pts, which devtmpfs does not provide.
+mkdir -p /dev/shm /dev/pts
+mount -t tmpfs none /dev/shm
+mount -t devpts none /dev/pts 2>/dev/null || true
 
 # Configure networking (VM side of the TAP link)
 # virtio_net, virtio_blk, virtio_pci are built-in to the Ubuntu kernel
