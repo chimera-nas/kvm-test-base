@@ -13,6 +13,10 @@ mount -t tmpfs none /tmp
 ip link set lo up
 ip link set eth0 up 2>/dev/null || true
 ip addr add 10.0.0.2/24 dev eth0 2>/dev/null || true
+# Default route to the server: the nfstest suite derives its own client IP via a
+# UDP connect()+getsockname() probe, which needs a route to choose a source
+# address (nothing routes off-subnet otherwise).  Harmless for other tests.
+ip route add default via 10.0.0.1 2>/dev/null || true
 
 # Re-enable kernel console output (quiet suppressed it during boot)
 echo 7 > /proc/sys/kernel/printk

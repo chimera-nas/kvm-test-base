@@ -26,6 +26,7 @@ RUN apt-get -y update && \
     ${KERNEL_PACKAGE} initramfs-tools kmod iproute2 \
     build-essential git ca-certificates libnsl-dev \
     time \
+    python3 tcpdump sudo \
     autoconf automake libtool pkg-config \
     libaio-dev libacl1-dev liburing-dev \
     uuid-dev xfslibs-dev libattr1-dev && \
@@ -50,6 +51,12 @@ RUN git clone https://github.com/chimera-nas/xfstests.git /opt/xfstests && \
 
 # Pre-generate nametest input file (nametest reads filenames from a file)
 RUN seq 1 100 | awk '{printf "xfstest_name_%04d\n", $1}' > /opt/xfstests/nametest_input
+
+# Linux nfstest suite (client-side, mounts the share itself + captures traffic
+# with tcpdump).  Pinned to the chimera fork's tag (v3.2 + a one-line open-test
+# fix for the modern-kernel O_CREAT|O_DIRECTORY EINVAL behaviour).
+RUN git clone https://github.com/chimera-nas/nfstest.git /opt/nfstest && \
+    git -C /opt/nfstest checkout v3.2-chimera1
 
 COPY init.sh /init.sh
 RUN chmod +x /init.sh
