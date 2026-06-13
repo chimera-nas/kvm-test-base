@@ -9,3 +9,22 @@
 # filesystem (IPC, scheduling, namespaces, device nodes, local-fs-only syscalls)
 # or require privileges/features NFS does not expose; expect a substantial list
 # here.  Seeded from a memfs baseline run; add an entry with a one-line reason.
+#
+# Baseline (memfs, NFSv4.2): 14609 passed, 411 skipped (TCONF), and 7 fail/broken.
+# Of those, cachestat02/ioctl01/remap_file_pages01 were a missing-/dev/shm-and-pts
+# guest gap (fixed in init.sh, now pass), leaving these three -- none of which is
+# an NFS-server signal:
+
+# Needs an LTP scratch block device (tst_device acquires a loop device + mkfs);
+# irrelevant when the fs under test is the NFS mount.  TBROK "Failed to acquire
+# device".
+fallocate06
+
+# Tests that a core-dumping signal sets the WCOREDUMP bit -- needs core-dump
+# capture (core_pattern/ulimit) the minimal guest does not configure; a signal
+# test, not a filesystem one.  TFAIL "core dump bit not set".
+kill11
+
+# Exercises the mount() syscall's own error paths (mounting via /proc/PID/fd),
+# not the NFS filesystem under test.  TFAIL expected-ENOENT.
+mount08
