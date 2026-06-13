@@ -96,7 +96,10 @@ docker cp "${CONTAINER_ID}:${INITRD_PATH}" "${OUTDIR}/initrd"
 EXTRACT_DIR=$(mktemp -d)
 docker export "$CONTAINER_ID" | tar xf - -C "$EXTRACT_DIR"
 
-truncate -s 4G "${OUTDIR}/rootfs.raw"
+# 6G (sparse) headroom: the LTP testcases/bin tree added in v1.3.0 pushes the
+# populated rootfs past the old 4G ceiling.  The qcow2 stays sparse, so the
+# published artifact only grows by the bytes actually used.
+truncate -s 6G "${OUTDIR}/rootfs.raw"
 mkfs.ext4 -F -d "$EXTRACT_DIR" "${OUTDIR}/rootfs.raw"
 rm -rf "$EXTRACT_DIR"
 EXTRACT_DIR=""

@@ -29,7 +29,8 @@ RUN apt-get -y update && \
     python3 tcpdump sudo \
     autoconf automake libtool pkg-config \
     libaio-dev libacl1-dev liburing-dev \
-    uuid-dev xfslibs-dev libattr1-dev && \
+    uuid-dev xfslibs-dev libattr1-dev \
+    libcap-dev libnuma-dev libtirpc-dev libkeyutils-dev keyutils libssl-dev bc && \
     update-initramfs -c -k all && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man
@@ -57,6 +58,40 @@ RUN seq 1 100 | awk '{printf "xfstest_name_%04d\n", $1}' > /opt/xfstests/nametes
 # fix for the modern-kernel O_CREAT|O_DIRECTORY EINVAL behaviour).
 RUN git clone https://github.com/chimera-nas/nfstest.git /opt/nfstest && \
     git -C /opt/nfstest checkout v3.2-chimera1
+
+# Linux Test Project (LTP).  Runs against a server-mounted directory (the harness
+# pre-mounts the share at /mnt), so unlike nfstest it needs no special wiring --
+# the chimera ctest matrix just hands runltp a scenario group + a per-group skip
+# file.  Pinned to a stable LTP release tag.  Build into /opt/ltp; drop the source
+# tree afterwards (make install copies runltp, runtest/ and testcases/bin into the
+# prefix).
+RUN git clone https://github.com/linux-test-project/ltp.git /opt/ltp-src && \
+    git -C /opt/ltp-src checkout 20260529 && \
+    cd /opt/ltp-src && \
+    make autotools && \
+    ./configure --prefix=/opt/ltp && \
+    make -j"$(nproc)" && \
+    make install && \
+    rm -rf /opt/ltp-src
+
+# kirk: the LTP test runner.  Upstream removed the old runltp (it now just prints
+# "use kirk" and exits 1), so the suite is driven by kirk -- a standalone,
+# pure-Python (stdlib-only) runner invoked as `python3 /opt/kirk/kirk`, pointed at
+# the installed LTP tree via LTPROOT.  ltp-run.sh wraps it; see below.
+RUN git clone --depth 1 -b v4.1.0 https://github.com/linux-test-project/kirk.git /opt/kirk
+
+# Per-group LTP skip files (the allowlist): tests that fail/break for reasons
+# intrinsic to NFS (no local block device, root-on-local-fs semantics, syscalls
+# the protocol cannot express) are listed here so runltp -S skips them, leaving
+# any remaining TFAIL/TBROK as a genuine server regression.  Seeded from a memfs
+# baseline run; refine as backends are fixed.
+COPY ltp-skip/ /opt/ltp-skip/
+
+# Wrapper the chimera ctest matrix invokes as `ltp-run.sh <group>`: runs the
+# group via kirk with its skip file and turns the JSON report into a pass/fail
+# exit code.
+COPY ltp-run.sh /opt/ltp-run.sh
+RUN chmod +x /opt/ltp-run.sh
 
 COPY init.sh /init.sh
 RUN chmod +x /init.sh
