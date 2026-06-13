@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2026 Chimera-NAS Project Contributors
+# SPDX-License-Identifier: Unlicense
+#
+# LTP "syscalls" scenario-group skip list (kirk --skip-file).  One test tag per line;
+# lines beginning with '#' and blank lines are ignored.  See fs.skip for the
+# policy.
+#
+# The syscalls group is large and many cases are unrelated to a network
+# filesystem (IPC, scheduling, namespaces, device nodes, local-fs-only syscalls)
+# or require privileges/features NFS does not expose; expect a substantial list
+# here.  Seeded from a memfs baseline run; add an entry with a one-line reason.
