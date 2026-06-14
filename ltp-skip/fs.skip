@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: 2026 Chimera-NAS Project Contributors
+# SPDX-License-Identifier: Unlicense
+#
+# LTP "fs" scenario-group skip list (kirk --skip-file).  One test tag per line; lines
+# beginning with '#' and blank lines are ignored.  List tests that fail or break
+# for reasons intrinsic to running over NFS (loop/block devices, local-fs-only
+# features) so that any remaining TFAIL/TBROK is a real server regression.
+#
+# Seeded from a memfs baseline run; add an entry with a one-line reason.
+
+# Needs an LTP scratch block device (tst_device: acquires a loop device + mkfs's
+# a fresh fs on it to fill) -- irrelevant when the fs under test is the NFS mount;
+# TBROK "Failed to acquire device" on every backend.
+fs_fill
