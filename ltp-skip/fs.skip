@@ -12,3 +12,8 @@
 # a fresh fs on it to fill) -- irrelevant when the fs under test is the NFS mount;
 # TBROK "Failed to acquire device" on every backend.
 fs_fill
+
+# Kernel binfmt_misc feature test -- nothing to do with the filesystem under test.
+# Passes locally but flakes under CI load (registering binary-format handlers in
+# /proc/sys/fs/binfmt_misc), and its failure output breaks kirk's JSON export.
+binfmt_misc02
