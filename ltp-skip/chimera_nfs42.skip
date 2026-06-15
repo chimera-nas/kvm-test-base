@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Chimera-NAS Project Contributors
+# SPDX-License-Identifier: Unlicense
+#
+# Skip list for the curated chimera_nfs42 group (kirk --skip-file; '#'/blank lines
+# ignored).  See fs.skip for the policy.
+
+# fallocate06 needs an LTP scratch block device (tst_device acquires a loop device
+# + mkfs's a fresh fs on it) -- irrelevant when the fs under test is the NFS mount;
+# TBROK "Failed to acquire device".
+fallocate06
