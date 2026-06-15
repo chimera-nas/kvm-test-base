@@ -75,6 +75,15 @@ RUN git clone https://github.com/linux-test-project/ltp.git /opt/ltp-src && \
     make install && \
     rm -rf /opt/ltp-src
 
+# Curated NFSv4.2-ops group.  chimera's KVM matrix runs only the LTP coverage the
+# other suites (pjdfstest, xfstests, cthon, pynfs/nfstest) do NOT provide -- one
+# slice of that is the syscalls that drive server operations unique to NFSv4.2:
+# fallocate (ALLOCATE/DEALLOCATE), copy_file_range (COPY/CLONE) and statx.
+# Generate a small runtest selecting just those from the installed syscalls
+# runtest so it tracks the pinned LTP version.
+RUN grep -hE '^(fallocate|copy_file_range|statx)[0-9]' \
+        /opt/ltp/runtest/syscalls > /opt/ltp/runtest/chimera_nfs42
+
 # kirk: the LTP test runner.  Upstream removed the old runltp (it now just prints
 # "use kirk" and exits 1), so the suite is driven by kirk -- a standalone,
 # pure-Python (stdlib-only) runner invoked as `python3 /opt/kirk/kirk`, pointed at
