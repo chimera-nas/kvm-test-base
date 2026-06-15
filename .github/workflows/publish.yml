@@ -29,9 +29,10 @@ jobs:
       matrix:
         arch: [amd64, arm64]
         variant:
-          - { name: ubuntu2404,     ubuntu: "24.04", codename: noble, kernel: linux-image-generic }
-          - { name: ubuntu2404_hwe, ubuntu: "24.04", codename: noble, kernel: linux-image-generic-hwe-24.04 }
-          - { name: ubuntu2204_hwe, ubuntu: "22.04", codename: jammy, kernel: linux-image-generic-hwe-22.04 }
+          - { name: ubuntu2404,     ubuntu: "24.04", codename: noble,    kernel: linux-image-generic }
+          - { name: ubuntu2404_hwe, ubuntu: "24.04", codename: noble,    kernel: linux-image-generic-hwe-24.04 }
+          - { name: ubuntu2204_hwe, ubuntu: "22.04", codename: jammy,    kernel: linux-image-generic-hwe-22.04 }
+          - { name: ubuntu2604,     ubuntu: "26.04", codename: resolute, kernel: linux-image-generic }
 
     name: ${{ matrix.variant.name }} (${{ matrix.arch }})
     steps:

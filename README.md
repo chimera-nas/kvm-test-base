@@ -54,6 +54,7 @@ oras pull ghcr.io/chimera-nas/kvm-test-base:ubuntu2404-v1.0.0-amd64 -o ./out
 | `ubuntu2404` | 24.04 | `linux-image-generic` |
 | `ubuntu2404_hwe` | 24.04 | `linux-image-generic-hwe-24.04` |
 | `ubuntu2204_hwe` | 22.04 | `linux-image-generic-hwe-22.04` |
+| `ubuntu2604` | 26.04 | `linux-image-generic` |
 
 See [`variants.txt`](variants.txt) for the canonical list.
 
@@ -62,6 +63,11 @@ See [`variants.txt`](variants.txt) for the canonical list.
 > chimera boots these guests with no initrd. 22.04 is covered by its HWE kernel
 > (`ubuntu2204_hwe`), which has virtio built in. `v1.0.0` still has all four
 > variants for consumers pinned to it.
+
+> The 26.04 **generic** kernel (added in `v1.4.0`) builds `virtio_blk` in, so it
+> boots no-initrd like 24.04 -- no HWE variant is needed yet. (`ubuntu2604_hwe`
+> is deferred: the `linux-image-generic-hwe-26.04` meta-package does not exist
+> until the 26.04.1 point release.)
 
 ## Building locally
 
