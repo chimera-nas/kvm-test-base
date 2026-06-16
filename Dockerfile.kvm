@@ -10,6 +10,13 @@ ARG KERNEL_PACKAGE=linux-image-generic
 ARG UBUNTU_VERSION_CODENAME
 ARG APT_MIRROR
 
+# Pinned cthon04 commit.  Its tests.init adds -std=gnu89 -- the single source of
+# CFLAGS for both the image build and the general tests' in-guest recompile of
+# stat.c (general/runtests.wrk).  Without it, GCC 15 on Ubuntu 26.04 rejects the
+# suite's K&R C as hard errors.  Pinned by SHA so it resolves regardless of
+# which branch carries the fix; bump this to adopt a newer cthon04.
+ARG CTHON04_COMMIT=13f4336cc95475d877d8f0376bbacda68a937711
+
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN if [ -n "${APT_MIRROR}" -a -n "${UBUNTU_VERSION_CODENAME}" ]; then \
@@ -35,14 +42,15 @@ RUN apt-get -y update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man
 
+# cthon04 pinned to ${CTHON04_COMMIT} (see ARG above for why).
 RUN git clone https://github.com/chimera-nas/cthon04.git /opt/cthon04 && \
     cd /opt/cthon04 && \
-    CTHON_CFLAGS="CFLAGS=-DLINUX -DHAVE_SOCKLEN_T -DGLIBC=22 -DMMAP -DSTDARG -std=gnu89" && \
-    make domount getopt "$CTHON_CFLAGS" && \
-    make -C basic "$CTHON_CFLAGS" && \
-    make -C general "$CTHON_CFLAGS" && \
-    make -C special "$CTHON_CFLAGS" && \
-    make -C lock "$CTHON_CFLAGS" && \
+    git checkout ${CTHON04_COMMIT} && \
+    make domount getopt && \
+    make -C basic && \
+    make -C general && \
+    make -C special && \
+    make -C lock && \
     chmod a+x runtests
 
 RUN git clone https://github.com/chimera-nas/xfstests.git /opt/xfstests && \
