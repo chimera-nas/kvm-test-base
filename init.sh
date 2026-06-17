@@ -17,7 +17,12 @@ mount -t devpts none /dev/pts 2>/dev/null || true
 # virtio_net, virtio_blk, virtio_pci are built-in to the Ubuntu kernel
 ip link set lo up
 ip link set eth0 up 2>/dev/null || true
-ip addr add 10.0.0.2/24 dev eth0 2>/dev/null || true
+# The guest IP defaults to 10.0.0.2, but the multi-client harness boots more than
+# one guest on the same link and passes guest_ip=<addr> on the cmdline so each
+# gets a distinct address (hence a distinct NFS client identity to the server).
+GUEST_IP=`cat /proc/cmdline | sed -ne 's/^.*guest_ip=\([0-9.]*\).*$/\1/p'`
+[ -z "$GUEST_IP" ] && GUEST_IP=10.0.0.2
+ip addr add ${GUEST_IP}/24 dev eth0 2>/dev/null || true
 # Default route to the server: the nfstest suite derives its own client IP via a
 # UDP connect()+getsockname() probe, which needs a route to choose a source
 # address (nothing routes off-subnet otherwise).  Harmless for other tests.
@@ -25,6 +30,13 @@ ip route add default via 10.0.0.1 2>/dev/null || true
 
 # Re-enable kernel console output (quiet suppressed it during boot)
 echo 7 > /proc/sys/kernel/printk
+
+# The multi-client harness flags the secondary client guest with start_sshd=1 so
+# the primary can drive it over ssh (nfstest's --client path).  Host keys and a
+# symmetric test keypair are baked into the image.
+case "`cat /proc/cmdline`" in
+    *start_sshd=1*) /usr/sbin/sshd 2>/dev/null || true ;;
+esac
 
 # Parse test_cmd="..." from kernel cmdline
 TEST_CMD=`cat /proc/cmdline | sed -e 's/^.*test_cmd="//' -e 's/".*$//'`
