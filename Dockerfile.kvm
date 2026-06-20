@@ -30,6 +30,7 @@ RUN apt-get -y update && \
     apt-get -y --no-install-recommends upgrade && \
     apt-get -y --no-install-recommends install \
     nfs-common cifs-utils iputils-ping netbase \
+    krb5-user \
     ${KERNEL_PACKAGE} initramfs-tools kmod iproute2 \
     build-essential git ca-certificates libnsl-dev \
     time \

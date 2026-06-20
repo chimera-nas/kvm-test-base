@@ -38,6 +38,38 @@ case "`cat /proc/cmdline`" in
     *start_sshd=1*) /usr/sbin/sshd 2>/dev/null || true ;;
 esac
 
+# Kerberos (sec=krb5) NFS client bring-up, triggered by krb5=1 on the cmdline.
+# The per-test realm material -- krb5.conf, the client machine keytab and the
+# /etc/hosts entries for the server/client FQDNs -- is generated at test time by
+# an ephemeral KDC on the host, so it cannot be baked into the image.  The host
+# harness passes it through a 9p share tagged "krbshare"; we copy it into place,
+# then start rpc.gssd, which backs the kernel's GSS upcall for a sec=krb5 mount.
+case "`cat /proc/cmdline`" in
+    *krb5=1*)
+        # A stable client hostname so the machine principal the harness put in
+        # the keytab (host/<fqdn>@REALM) matches what rpc.gssd looks up.
+        GUEST_HOST=`cat /proc/cmdline | sed -ne 's/^.*guest_host=\([^ ]*\).*$/\1/p'`
+        [ -n "$GUEST_HOST" ] && hostname "$GUEST_HOST"
+
+        modprobe 9pnet_virtio 2>/dev/null || true
+        modprobe 9p 2>/dev/null || true
+        modprobe rpcsec_gss_krb5 2>/dev/null || true
+
+        mkdir -p /mnt/krb
+        if mount -t 9p -o trans=virtio,version=9p2000.L krbshare /mnt/krb 2>/dev/null; then
+            [ -f /mnt/krb/krb5.conf ]   && cp /mnt/krb/krb5.conf /etc/krb5.conf
+            [ -f /mnt/krb/krb5.keytab ] && { cp /mnt/krb/krb5.keytab /etc/krb5.keytab; chmod 600 /etc/krb5.keytab; }
+            [ -f /mnt/krb/hosts ]       && cat /mnt/krb/hosts >> /etc/hosts
+            umount /mnt/krb 2>/dev/null || true
+        fi
+
+        # rpc.gssd talks to the kernel over rpc_pipefs.
+        mkdir -p /var/lib/nfs/rpc_pipefs
+        mount -t rpc_pipefs rpc_pipefs /var/lib/nfs/rpc_pipefs 2>/dev/null || true
+        /usr/sbin/rpc.gssd 2>/dev/null || true
+        ;;
+esac
+
 # Parse test_cmd="..." from kernel cmdline
 TEST_CMD=`cat /proc/cmdline | sed -e 's/^.*test_cmd="//' -e 's/".*$//'`
 

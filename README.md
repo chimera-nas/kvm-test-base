@@ -18,6 +18,25 @@ This repo was split out of `chimera/kvm/` so the (expensive) image build runs
 **once per version** and is published as a downloadable artifact, instead of
 being rebuilt on every chimera CI run.
 
+### Kerberos (sec=krb5) NFS
+
+The image ships `krb5-user` and `nfs-common`'s `rpc.gssd` so the guest can mount
+with `sec=krb5`/`krb5i`/`krb5p`. The realm material (krb5.conf, the client
+machine keytab, and `/etc/hosts` entries) is generated per test by an ephemeral
+KDC on the host and handed to the guest over a 9p share tagged `krbshare`, so it
+is **not** baked into the image. To activate it the host harness passes
+`krb5=1` (and optionally `guest_host=<fqdn>`) on the kernel cmdline and exposes
+the share, e.g.:
+
+```
+-fsdev local,id=krbfs,path=<krbdir>,security_model=none \
+-device virtio-9p-pci,fsdev=krbfs,mount_tag=krbshare
+```
+
+`init.sh` then copies `krbshare/{krb5.conf,krb5.keytab,hosts}` into place, sets
+the hostname, loads `rpcsec_gss_krb5`, mounts `rpc_pipefs`, and starts
+`rpc.gssd`.
+
 ## Published artifacts
 
 The [publish workflow](.github/workflows/publish.yml) builds each variant for
