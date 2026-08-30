@@ -26,10 +26,17 @@ RUN if [ -n "${APT_MIRROR}" -a -n "${UBUNTU_VERSION_CODENAME}" ]; then \
     rm -f /etc/apt/sources.list.d/ubuntu.sources; \
     fi
 
+# nfs-kernel-server (rpc.nfsd, rpc.mountd, exportfs) makes the guest usable as
+# an NFS *server* as well as a client: the chimera-nas/specs conformance harness
+# boots this image to replay the model-generated NFS corpus against the Linux
+# kernel server (knfsd) as an independent reference implementation.  The nfsd
+# module is already in the kernel package; this adds the userspace half.  The
+# packaged services are not enabled -- a harness that wants knfsd starts
+# rpcbind/rpc.mountd/rpc.nfsd itself from test_cmd and exports what it needs.
 RUN apt-get -y update && \
     apt-get -y --no-install-recommends upgrade && \
     apt-get -y --no-install-recommends install \
-    nfs-common cifs-utils iputils-ping netbase \
+    nfs-common nfs-kernel-server cifs-utils iputils-ping netbase \
     krb5-user \
     ${KERNEL_PACKAGE} initramfs-tools kmod iproute2 \
     build-essential git ca-certificates libnsl-dev \

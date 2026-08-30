@@ -10,7 +10,10 @@ KVM-based integration tests (NFS/SMB/pNFS over a real client kernel).
 
 These images contain **no chimera code** — they are generic Ubuntu guests with
 NFS/CIFS client tooling plus the [cthon04](https://github.com/chimera-nas/cthon04)
-and [xfstests](https://github.com/chimera-nas/xfstests) suites. At test time
+and [xfstests](https://github.com/chimera-nas/xfstests) suites. Since `v1.10.0`
+they also carry `nfs-kernel-server`, so a guest can serve NFS (knfsd) as a
+reference implementation for the [specs](https://github.com/chimera-nas/specs)
+conformance harness; nothing starts it unless a harness asks. At test time
 chimera runs a server on the host (in a network namespace) and the VM mounts its
 export and runs the suites against it.
 
