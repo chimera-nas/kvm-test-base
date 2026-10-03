@@ -33,10 +33,14 @@ RUN if [ -n "${APT_MIRROR}" -a -n "${UBUNTU_VERSION_CODENAME}" ]; then \
 # module is already in the kernel package; this adds the userspace half.  The
 # packaged services are not enabled -- a harness that wants knfsd starts
 # rpcbind/rpc.mountd/rpc.nfsd itself from test_cmd and exports what it needs.
+# ksmbd-tools (ksmbd.mountd, ksmbd.adduser) does the same for SMB: the ksmbd
+# module is in the kernel package, and this is the userspace half the specs
+# harness needs to replay the SMB2 corpus against the kernel's SMB server.
+# Nothing starts it unless a harness asks.
 RUN apt-get -y update && \
     apt-get -y --no-install-recommends upgrade && \
     apt-get -y --no-install-recommends install \
-    nfs-common nfs-kernel-server cifs-utils iputils-ping netbase \
+    nfs-common nfs-kernel-server cifs-utils ksmbd-tools iputils-ping netbase \
     krb5-user \
     ${KERNEL_PACKAGE} initramfs-tools kmod iproute2 \
     build-essential git ca-certificates libnsl-dev \

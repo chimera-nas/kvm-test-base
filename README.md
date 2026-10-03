@@ -13,7 +13,9 @@ NFS/CIFS client tooling plus the [cthon04](https://github.com/chimera-nas/cthon0
 and [xfstests](https://github.com/chimera-nas/xfstests) suites. Since `v1.10.0`
 they also carry `nfs-kernel-server`, so a guest can serve NFS (knfsd) as a
 reference implementation for the [specs](https://github.com/chimera-nas/specs)
-conformance harness; nothing starts it unless a harness asks. At test time
+conformance harness, and since `v1.11.0` `ksmbd-tools`, so it can serve SMB
+from the kernel (ksmbd) for the same purpose; nothing starts either unless a
+harness asks. At test time
 chimera runs a server on the host (in a network namespace) and the VM mounts its
 export and runs the suites against it.
 
