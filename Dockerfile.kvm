@@ -72,12 +72,16 @@ RUN git clone https://github.com/chimera-nas/xfstests.git /opt/xfstests && \
 RUN seq 1 100 | awk '{printf "xfstest_name_%04d\n", $1}' > /opt/xfstests/nametest_input
 
 # Linux nfstest suite (client-side, mounts the share itself + captures traffic
-# with tcpdump).  Pinned to the chimera fork's tag (v3.2 + a modern-kernel
+# with tcpdump).  Pinned to the chimera fork (v3.2 + a modern-kernel
 # O_CREAT|O_DIRECTORY open fix, plus Python 3.14 compatibility fixes -- rexec
 # exec/eval namespace, ast.Num removal in pktt, multiprocessing fork default --
-# needed for the Ubuntu 26.04 guest).
+# needed for the Ubuntu 26.04 guest).  The recall verifier searches from the
+# CB_RECALL call, so recovery RPCs sent before the callback reply are included
+# (chimera-nas/nfstest#1).  Run its packet-replay regression during the build.
 RUN git clone https://github.com/chimera-nas/nfstest.git /opt/nfstest && \
-    git -C /opt/nfstest checkout v3.2-chimera2
+    git -C /opt/nfstest checkout 58b7503b9567e61663012b60ca08fb9b80007316 && \
+    cd /opt/nfstest && \
+    PYTHONPATH=. python3 -m unittest discover -s tests -p test_delegation_recall.py
 
 # Linux Test Project (LTP).  Runs against a server-mounted directory (the harness
 # pre-mounts the share at /mnt), so unlike nfstest it needs no special wiring --
